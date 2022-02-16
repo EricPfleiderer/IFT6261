@@ -130,3 +130,9 @@ dmypy.json
 
 # Dataset repository
 data/
+
+# Logging
+logs/
+
+# Model weights
+models/
