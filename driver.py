@@ -13,6 +13,11 @@ from src.classifier import ClassifierMNIST
 logging_level = logging.DEBUG
 utils.set_logging(logging_level)
 
+# Torch device used for training (CPU/GPU)
+device_type = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = torch.device(device_type)
+logging.debug(f'Training device type:{ device_type}')
+
 # Hyperparams
 learning_rate = 0.001
 momentum = 0.5
@@ -24,6 +29,7 @@ train_loader, test_loader = loaders.get_mnist_loaders(batch_size)
 
 # MNIST classifier
 classifier = ClassifierMNIST()
+classifier = classifier.to(device)
 optimizer = optim.SGD(classifier.parameters(), lr=learning_rate, momentum=momentum)
 
 # Training
@@ -32,6 +38,7 @@ for epoch in range(epochs):
 
     train_loss = 0
     for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = classifier(data)
         train_loss = F.nll_loss(output, target)
@@ -42,6 +49,7 @@ for epoch in range(epochs):
     hit = 0
     with torch.no_grad():
         for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
             output = classifier(data)
             test_loss += F.nll_loss(output, target, size_average=False).item()
             pred = output.data.max(1, keepdim=True)[1]
@@ -51,5 +59,4 @@ for epoch in range(epochs):
     logging.info(f'Epoch:{epoch}/{epochs}, train_loss:{round(train_loss.item(), 4)}, test_loss:{round(test_loss, 4)}')
 
 
-# Apply genetic algorithm here!
-
+# Apply genetic algorithm here
