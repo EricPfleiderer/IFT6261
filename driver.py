@@ -1,62 +1,20 @@
 import logging
-
-import torch
-import torch.optim as optim
-import torch.nn.functional as F
+from src.trainable import TorchTrainable
+from src.hyperparams import CNN_space
+from src.configs import configs
 
 import src.utils as utils
-import src.loaders as loaders
-from src.classifier import ClassifierMNIST
 
 
 # Set stdout logging level
 logging_level = logging.DEBUG
 utils.set_logging(logging_level)
 
-# Torch device used for training (CPU/GPU)
-device_type = 'cuda' if torch.cuda.is_available() else 'cpu'
-device = torch.device(device_type)
-logging.debug(f'Training device type:{ device_type}')
+# Defining training and model parameters
+params = dict(**CNN_space, **configs)
 
-# Hyperparams
-learning_rate = 0.001
-momentum = 0.5
-batch_size = 64
-epochs = 20
-
-# Data loaders
-train_loader, test_loader = loaders.get_mnist_loaders(batch_size)
-
-# MNIST classifier
-classifier = ClassifierMNIST()
-classifier = classifier.to(device)
-optimizer = optim.SGD(classifier.parameters(), lr=learning_rate, momentum=momentum)
-
-# Training
-logging.info(f'Training MNIST classifier for {epochs} epochs')
-for epoch in range(epochs):
-
-    train_loss = 0
-    for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device), target.to(device)
-        optimizer.zero_grad()
-        output = classifier(data)
-        train_loss = F.nll_loss(output, target)
-        train_loss.backward()
-        optimizer.step()
-
-    test_loss = 0
-    hit = 0
-    with torch.no_grad():
-        for data, target in test_loader:
-            data, target = data.to(device), target.to(device)
-            output = classifier(data)
-            test_loss += F.nll_loss(output, target, size_average=False).item()
-            pred = output.data.max(1, keepdim=True)[1]
-            hit += pred.eq(target.data.view_as(pred)).sum()
-        test_loss /= len(test_loader.dataset)
-
-    logging.info(f'Epoch:{epoch}/{epochs}, train_loss:{round(train_loss.item(), 4)}, test_loss:{round(test_loss, 4)}')
+# Trainable class
+trainable = TorchTrainable(params)
+trainable.train()
 
 
-# Apply genetic algorithm here

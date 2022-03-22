@@ -46,3 +46,8 @@ class ClassifierMNIST(nn.Module, BaseClassifier):
 
     def save(self, path):
         pass
+
+
+def get_classifier_by_dataset_name(name):
+    if name.lower() == 'mnist':
+        return ClassifierMNIST()

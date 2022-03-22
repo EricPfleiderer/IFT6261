@@ -16,5 +16,11 @@ def get_mnist_loaders(batch_size, root='data/', download=True, shuffle=True):
 
     # TODO: apply transforms to data
 
-    return  train_loader, test_loader
+    return train_loader, test_loader
+
+
+def get_dataset_by_name(name, batch_size, root='data/', download=True, shuffle=True):
+
+    if name.lower() == 'mnist':
+        return get_mnist_loaders(batch_size, root, download, shuffle)
 
