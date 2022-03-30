@@ -2,7 +2,7 @@ import torch
 
 configs = {
     # DATASET
-    'dataset_name': 'MNIST',
+    'dataset_name': 'MNIST', 'CIFAR10'
     'dataset_root': 'data/',
     'download_data': True,
     'shuffle_data': True,

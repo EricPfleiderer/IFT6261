@@ -1,28 +1,8 @@
-
 import torch.nn as nn
 import torch.nn.functional as F
 
-from abc import ABC, abstractmethod
 
-import torch
-
-
-class BaseClassifier(ABC):
-
-    @abstractmethod
-    def forward(self, x):
-        pass
-
-    @abstractmethod
-    def load(self, path):
-        pass
-
-    @abstractmethod
-    def save(self, path):
-        pass
-
-
-class ClassifierMNIST(nn.Module, BaseClassifier):
+class ClassifierMNIST(nn.Module):
 
     def __init__(self):
         super(ClassifierMNIST, self).__init__()
@@ -33,6 +13,12 @@ class ClassifierMNIST(nn.Module, BaseClassifier):
         self.fc2 = nn.Linear(50, 10)
 
     def forward(self, x):
+
+        """
+        :param x: A 3d batch of 2d images (single channel)
+        :return:
+        """
+
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
         x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
         x = x.view(-1, 320)
@@ -40,12 +26,6 @@ class ClassifierMNIST(nn.Module, BaseClassifier):
         x = F.dropout(x, training=self.training)
         x = self.fc2(x)
         return F.log_softmax(x)
-
-    def load(self, path):
-        pass
-
-    def save(self, path):
-        pass
 
 
 def get_classifier_by_dataset_name(name):
