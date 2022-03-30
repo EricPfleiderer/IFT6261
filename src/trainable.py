@@ -64,13 +64,12 @@ class TorchTrainable:
                 self.optimizer.zero_grad()
                 output = self.model(data)
                 predictions = output.data.max(1, keepdim=True)[1]
-                train_hits += output.eq(target.data.view_as(predictions)).sum()
-                loss = F.nll_loss(output, target)
-                train_loss += loss.item()
-                loss.backward()
+                train_hits += predictions.eq(target.data.view_as(predictions)).sum()
+                train_loss = F.nll_loss(output, target)
+                train_loss.backward()
                 self.optimizer.step()
-            train_loss /= len(self.train_loader.dataset)
-            train_accuracy = train_hits.cpu().detach() / self.train_loader.dataset.data.shape[0]
+            # train_loss /= len(self.train_loader)  # implicit in .backward call?
+            train_accuracy = train_hits / self.train_loader.dataset.data.shape[0]
 
             # Validation
             test_loss = 0
@@ -84,15 +83,15 @@ class TorchTrainable:
                     test_hits += predictions.eq(target.data.view_as(predictions)).sum()
 
             test_loss /= len(self.test_loader.dataset)
-            test_accuracy = test_hits.cpu().detach() / self.test_loader.dataset.data.shape[0]
+            test_accuracy = test_hits / self.test_loader.dataset.data.shape[0]
 
-            self.history['train_loss'].append(train_loss)
-            self.history['train_accuracy'].append(train_accuracy)
+            self.history['train_loss'].append(train_loss.item())
+            self.history['train_accuracy'].append(train_accuracy.data.cpu().detach().numpy())
             self.history['test_loss'].append(test_loss)
-            self.history['test_accuracy'].append(test_accuracy)
+            self.history['test_accuracy'].append(test_accuracy.data.cpu().detach().numpy())
 
             logging.info(f'Epoch: {epoch}/' + str(self.params['num_epochs']) +
-                         ', train loss: ' + '{:.4f}'.format(round(train_loss, 4)) +
+                         ', train loss: ' + '{:.4f}'.format(round(train_loss.item(), 4)) +
                          ', test_loss: ' + '{:.4f}'.format(round(test_loss, 4)))
 
     def infer(self, x):
