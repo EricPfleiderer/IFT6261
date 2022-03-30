@@ -1,5 +1,9 @@
-from src.hyperparams import *
+
 import matplotlib.pyplot as plt
+from configs import *
+
+from src.trainable import TorchTrainable
+from src.hyperparams import *
 
 
 def find_candidates(trainable, threshold=0.25, trained=True):
