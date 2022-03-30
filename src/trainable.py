@@ -95,7 +95,7 @@ class TorchTrainable:
                          ', test_loss: ' + '{:.4f}'.format(round(test_loss, 4)))
 
     def infer(self, x):
-        return self.model.forward(x)
+        return self.model.forward(x.to(self.device))
 
     def __call__(self, x):
         return self.infer(x)
