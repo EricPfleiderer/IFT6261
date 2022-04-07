@@ -95,7 +95,19 @@ class TorchTrainable:
                          ', test_loss: ' + '{:.4f}'.format(round(test_loss, 4)))
 
     def infer(self, x):
-        return self.model.forward(x.to(self.device))
+
+        if len(x.shape) == 2:
+            # If x is a single image, unsqueeze twice (once for channel, once for batch)
+            x = torch.unsqueeze(x, dim=0)
+            x = torch.unsqueeze(x, dim=0)
+
+        elif len(x.shape) == 3:
+            # If x is of dim 3, it is assumed that the missing dim is the channel dim.
+            x = torch.unsqueeze(x, dim=1)
+
+        preds = torch.exp(self.model(x.to(self.device)))
+
+        return preds
 
     def __call__(self, x):
         return self.infer(x)
