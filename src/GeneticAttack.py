@@ -5,7 +5,7 @@ from src.trainable import TorchTrainable
 # Attacker algorithm here
 class GeneticAttack:
 
-    def __init__(self, x: torch.Tensor, y: int, trainable: TorchTrainable, N=10, epochs=50, selective_pressure=0.3,
+    def __init__(self, x: torch.Tensor, y: int, trainable: TorchTrainable, N=10, epochs=50, selective_pressure=0.2,
                  asexual_repro=1, epsilon=0.1, uncertainty_power=2, sameness_power=4):
 
         """
@@ -41,8 +41,10 @@ class GeneticAttack:
 
             # Evaluate the quality of the population
             qual = self.evaluate_quality(population)
-            rank = torch.flip(torch.argsort(qual), dims=[0])  # Inverse the rank (xform max prob into min problem)
-            print(qual[rank[-1]].data)
+            rank = torch.argsort(qual, descending=True)  # Inverse the rank (xform max prob into min problem)
+
+            if i % 10:
+                print(qual[rank[-1]].data)
 
             # Choose the fittest units for reproduction (N/2 parents chosen with replacement among the fittest)
             parents_idx = []
@@ -60,7 +62,7 @@ class GeneticAttack:
             children[torch.where(children != 0)] += torch.normal(0, 0.05, size=children[torch.where(children != 0)].shape)
             children = torch.clamp(children, 0, 1)
 
-            # Elitism (maintain top solution at all times)
+            # Elitism (maintain top solution at all times) # TODO: DEBUG ELITISM
             top_solution = population[rank[-1]]
             population = children
             population[0] = top_solution
@@ -143,10 +145,17 @@ class GeneticAttack:
         """
         # TODO: Find optimal parameters for quality eval (epsilon, powers)
 
-        # adversarial_prediction = torch.exp(self.trainable(torch.unsqueeze(adversarial_x, dim=1)))
-        # adversarial_prediction[:, self.y] = 0
-        # loss = torch.sum(torch.pow(adversarial_prediction, self.uncertainty_power), dim=0)  # TODO: REVISIT LOSS TO ENSURE LOSS IS DRIVEN TOWARDS A SINGLE OTHER CLASS
+        uncertainty_loss = self.trainable(adversarial_x)[:, self.y]
 
-        loss = torch.exp(self.trainable(torch.unsqueeze(adversarial_x, dim=1)))[self.y]
+        sameness_loss = (self.x-adversarial_x)**self.sameness_power
 
-        return loss + self.epsilon * torch.sum((self.x-adversarial_x)**self.sameness_power)
+        if len(adversarial_x.shape) == 2:
+            sameness_loss = torch.sum((self.x-adversarial_x)**self.sameness_power).to(self.trainable.device)
+
+        else:
+            for x in range(len(adversarial_x.shape)-1):
+                sameness_loss = torch.sum(sameness_loss, dim=1)
+
+        sameness_loss = sameness_loss.to(self.trainable.device)
+
+        return uncertainty_loss + self.epsilon * sameness_loss

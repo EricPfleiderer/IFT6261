@@ -21,6 +21,7 @@ trainable = pickle.load(open('models/test.json', 'rb'))
 # Attack sample (single out of sample image and target)
 x, y = trainable.test_loader.dataset[788][0][0], trainable.test_loader.dataset[788][1]
 
-ga = GeneticAttack(x, y, trainable)
+ga = GeneticAttack(x, y, trainable, N=20, epochs=100, selective_pressure=0.4, asexual_repro=1, epsilon=0.05,
+                   uncertainty_power=2, sameness_power=2)
 
 
