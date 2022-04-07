@@ -30,6 +30,7 @@ class GeneticAttack:
         self.epsilon = epsilon
         self.uncertainty_power = uncertainty_power
         self.sameness_power = sameness_power
+        self.best_solution = x
 
         # Create a population by duplicating the attack target (x)
         population = torch.stack([x for i in range(N)])
@@ -63,9 +64,9 @@ class GeneticAttack:
             children = torch.clamp(children, 0, 1)
 
             # Elitism (maintain top solution at all times) # TODO: DEBUG ELITISM
-            top_solution = population[rank[-1]]
+            self.best_solution = population[rank[-1]]
             population = children
-            population[0] = top_solution
+            population[0] = self.best_solution
 
             a=10
 
