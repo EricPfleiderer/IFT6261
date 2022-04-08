@@ -3,7 +3,7 @@ import torch.optim as optim
 
 CNN_space = {
     'batch_size': 64,
-    'num_epochs': 20,
+    'num_epochs': 10,
     'optimizer': {
         'type': optim.SGD,  # Must be callable
         'opt_params': {

@@ -112,13 +112,7 @@ class TorchTrainable:
     def __call__(self, x):
         return self.infer(x)
 
-    def save(self):
-        pass
-
-    def load(self):
-        pass
-
-    def plot_history(self, save=True, show=False):
+    def plot_history(self, path, save=True, show=False):
 
         num_epochs = self.params['num_epochs']
         plt.figure()
@@ -126,7 +120,7 @@ class TorchTrainable:
         plt.plot(np.arange(1, num_epochs + 1), self.history['test_loss'], label='Test loss')
         plt.legend(loc='best')
         if save:
-            plt.savefig('outputs/loss.jpg')
+            plt.savefig(path + '/classifier_loss.jpg')
         if show:
             plt.show()
 
@@ -135,7 +129,7 @@ class TorchTrainable:
         plt.plot(np.arange(1, num_epochs + 1), self.history['test_accuracy'], label='Test accuracy')
         plt.legend(loc='best')
         if save:
-            plt.savefig('outputs/accuracy.jpg')
+            plt.savefig(path + 'classifier_accuracy.jpg')
         if show:
             plt.show()
 

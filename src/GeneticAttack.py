@@ -1,25 +1,29 @@
 import torch
 from src.trainable import TorchTrainable
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 # Attacker algorithm here
 class GeneticAttack:
 
-    def __init__(self, x: torch.Tensor, y: int, trainable: TorchTrainable, N=10, epochs=50, selective_pressure=0.2,
-                 asexual_repro=1, epsilon=0.1, uncertainty_power=2, sameness_power=4):
+    def __init__(self, x: torch.Tensor, y: int, trainable: TorchTrainable, N: int = 10, epochs=50,
+                 selective_pressure: float = 0.2, asexual_repro: float = 1, epsilon: float = 0.1,
+                 uncertainty_power: int = 2, sameness_power: int = 4):
 
         """
         :param x: 28 by 28 torch tensor of the original image.
         :param y: Target.
         :param trainable: Trainable targeted by the attack.
-        :param N; Size of the population during the simulation.
+        :param N; Size of the population during the simulation. Strongly recommended to use a pair integer.
         :param epochs: Number of epochs to run the genetic algorithm.
-        :param elite_perc: Percentage of the most fit population that are considered during reproduction.
-        :param epsilon: Coefficient for the linear combination between uncertainty and sameness in the loss.
-        :param uncertainty_power: Power of the exponent used in the uncertainty equation.
-        :param sameness_power: Power of the exponent used in the sameness equation.
-        :return:
+        :param selective_pressure: Percentage of the most fit population that are considered during reproduction.
+        :param asexual_repro: Percentage of the population that will reproduce asexually (cloning)
+        :param epsilon: Coefficient for the linear combination between uncertainty and sameness in the loss function.
+        :param uncertainty_power: Power of the exponent used in the uncertainty term of the loss function.
+        :param sameness_power: Power of the exponent used in the sameness term in the loss function.
         """
+
         self.x = x
         self.y = y
         self.trainable = trainable
@@ -32,55 +36,65 @@ class GeneticAttack:
         self.sameness_power = sameness_power
         self.best_solution = x
 
+        self.history = {
+            'uncertainty_loss': [],
+            'sameness_loss': [],
+            'best_solution': [],
+            'prediction_dist': [],
+        }
+
         # Create a population by duplicating the attack target (x)
         population = torch.stack([x for i in range(N)])
 
+        # Run a genetic attack
         for i in range(epochs):
 
             # TODO: add different types of mutations
             # TODO: implement perturbation decay
 
             # Evaluate the quality of the population
-            qual = self.evaluate_quality(population)
-            rank = torch.argsort(qual, descending=True)  # Inverse the rank (xform max prob into min problem)
+            quality = self.evaluate_quality(population)
+
+            # Rank the population in order of descending quality (loss minimization)
+            rank = torch.argsort(quality, descending=True)
 
             if i % 10:
-                print(qual[rank[-1]].data)
+                print(f'{i}: {quality[rank[-1]].data}')
 
-            # Choose the fittest units for reproduction (N/2 parents chosen with replacement among the fittest)
+            # Choose the fittest units for reproduction (N//2 parents chosen with replacement among the fittest)
             parents_idx = []
-
             for n in range(self.N // 2):
                 parents = self.select_parents(rank)
                 parents_idx.append(parents)
-
             parents_idx = torch.stack(parents_idx)
 
             # Create the new generation from the fittest parents
             children = self.generate_children(population, parents_idx)
 
-            # Perturb the population with random mutations (non zero values only)
+            # Perturb the population with random mutations
             children[torch.where(children != 0)] += torch.normal(0, 0.05, size=children[torch.where(children != 0)].shape)
             children = torch.clamp(children, 0, 1)
 
-            # Elitism (maintain top solution at all times) # TODO: DEBUG ELITISM
+            # Elitism (maintain top solution at all times)
             self.best_solution = population[rank[-1]]
             population = children
             population[0] = self.best_solution
 
-            a=10
+            # Add to history
+            uncertainty_loss, sameness_loss = self.loss(self.best_solution)
+            self.history['uncertainty_loss'].append(uncertainty_loss.cpu().detach())
+            self.history['sameness_loss'].append(sameness_loss.cpu().detach())
+            self.history['best_solution'].append(self.best_solution.cpu().detach())
+            self.history['prediction_dist'].append(self.trainable(self.best_solution).cpu().detach())
 
-    def complement_idx(self, idx, dim):
-
-        # SOURCE: https://stackoverflow.com/questions/67157893/pytorch-indexing-select-complement-of-indices
+    def complement_idx(self, idx: torch.Tensor, dim: int):
 
         """
-        Compute the complement: set(range(dim)) - set(idx).
-        idx is a multi-dimensional tensor, find the complement for its trailing dimension,
-        all other dimension is considered batched.
-        Args:
-            idx: input index, shape: [N, *, K]
-            dim: the max index for complement
+        Compute the following complement: set(range(dim)) - set(idx).
+        SOURCE:  https://stackoverflow.com/questions/67157893/pytorch-indexing-select-complement-of-indices
+
+        :param idx: indexes to be excluded in order to form the complement
+        :param dim: max index for the complement
         """
         a = torch.arange(dim, device=idx.device)
         ndim = idx.ndim
@@ -121,10 +135,16 @@ class GeneticAttack:
 
         return children
 
-    def select_parents(self, rank):
+    def select_parents(self, rank: torch.Tensor):
 
-        #TODO: optimize (naive implementation)
+        """
+        :param rank: The descending ranking of the population in terms of quality.
+        :return: The index of 2 individuals chosen to become parents.
+        """
 
+        # TODO: optimize (naive implementation)
+
+        # We select the first
         lower_bound = int((1 - self.selective_pressure) * self.N)
         first_index = torch.randint(low=lower_bound, high=self.N, size=(1,), device=self.trainable.device)
 
@@ -138,7 +158,7 @@ class GeneticAttack:
 
         return torch.tensor([first_parent, second_parent], device=self.trainable.device)
 
-    def evaluate_quality(self, adversarial_x):
+    def evaluate_quality(self, adversarial_x: torch.Tensor):
 
         """
         :param adversarial_x: batch of 28 by 28 perturbed images
@@ -146,6 +166,11 @@ class GeneticAttack:
         """
         # TODO: Find optimal parameters for quality eval (epsilon, powers)
 
+        uncertainty_loss, sameness_loss = self.loss(adversarial_x)
+
+        return uncertainty_loss + self.epsilon * sameness_loss
+
+    def loss(self, adversarial_x: torch.Tensor):
         uncertainty_loss = self.trainable(adversarial_x)[:, self.y]
 
         sameness_loss = (self.x-adversarial_x)**self.sameness_power
@@ -159,4 +184,35 @@ class GeneticAttack:
 
         sameness_loss = sameness_loss.to(self.trainable.device)
 
-        return uncertainty_loss + self.epsilon * sameness_loss
+        return uncertainty_loss, sameness_loss
+
+    def plot_history(self, path, save=True, show=False):
+
+        # Initial image
+        plt.figure()
+        plt.imshow(self.x)
+        if save:
+            plt.savefig(path + 'original_x.')
+        if show:
+            plt.show()
+
+        # Adversarial image
+        plt.figure()
+        plt.imshow(self.best_solution)
+        if save:
+            plt.savefig(path + 'adversarial_x.jpg')
+        if show:
+            plt.show()
+
+        x = range(0, self.epochs)
+        plt.figure()
+        plt.plot(x, self.history['uncertainty_loss'], label='Uncertainty loss', linestyle='--')
+        plt.plot(x, self.epsilon * np.array(self.history['sameness_loss']), label='$\epsilon $' + ' x Sameness loss',
+                 linestyle='--')
+        plt.plot(x, np.array(self.history['uncertainty_loss']) + self.epsilon * np.array(self.history['sameness_loss']),
+                 label='Total loss')
+        plt.legend()
+        if save:
+            plt.savefig(path + 'ga_loss.jpg')
+        if show:
+            plt.show()
