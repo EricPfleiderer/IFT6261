@@ -11,6 +11,7 @@ from src.GeneticAttack import GeneticAttack
 from src.trainable import TorchTrainable
 from src.hyperparams import *
 from src.configs import configs
+from src.graphing import *
 
 # Set stdout logging level
 logging_level = logging.INFO
@@ -60,5 +61,6 @@ def run_experiment(x_index=788, trained_classifier_path=None, root='outputs/expe
     adversarial_prediction_dist = trainable(ga.best_solution)
     print(f'The model thinks this is an image of a {torch.argmax(adversarial_prediction_dist)} with a confidence of {torch.max(adversarial_prediction_dist)}')
 
+    generate_experiment_recap(full_path)
 
 run_experiment()

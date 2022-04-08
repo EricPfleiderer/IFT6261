@@ -1,9 +1,84 @@
 
 import matplotlib.pyplot as plt
-from configs import *
+from src.configs import *
 
 from src.trainable import TorchTrainable
 from src.hyperparams import *
+from src.GeneticAttack import *
+
+import pickle
+import shutil
+
+import re
+import torch
+
+
+def generate_experiment_recap(path_to_experiment):
+
+    import os
+    import cv2
+
+    # Fetch genetic attack object
+    ga: GeneticAttack = pickle.load(open(path_to_experiment+'/models/ga.json', 'rb'))
+
+    # Create temporary dir
+
+    if os.path.isdir(path_to_experiment + '/temp'):
+        shutil.rmtree(path_to_experiment + '/temp')
+
+    os.makedirs(path_to_experiment + '/temp')
+
+    # Generate frames from ga object
+    figure, axis = plt.subplots()
+    for epoch in range(ga.epochs):
+
+        x = range(epoch)
+
+        figure, axis = plt.subplots(2, 2)
+
+        axis[0, 0].imshow(ga.history['best_solution'][epoch])
+        axis[0, 0].set_title('Current solution')
+
+        axis[0, 1].bar(range(0, 10), ga.history['prediction_dist'][epoch][0])
+        axis[0, 1].set_title('Model predictions')
+        axis[0, 1].set_ylim([0, 1])
+
+        axis[1, 0].plot(x, ga.history['uncertainty_loss'][0:epoch])
+        axis[1, 0].set_title('Uncertainty loss')
+        axis[1, 0].set_xlim([0, ga.epochs])
+        axis[1, 0].set_ylim([0, 1])
+
+        axis[1, 1].plot(x, ga.epsilon*np.array(ga.history['sameness_loss'][0:epoch]))
+        axis[1, 1].set_title('Sameness loss')
+        axis[1, 1].set_xlim([0, ga.epochs])
+        axis[1, 1].set_ylim([0, ga.epsilon*np.max(np.array(ga.history['sameness_loss']))])
+
+        plt.savefig(path_to_experiment + '/temp/' + f'{epoch}.png')
+
+    # Generate video from frames
+    image_folder = path_to_experiment + '/temp'
+    video_name = path_to_experiment + '/recap.avi'
+
+    def natural_sort(l):
+        convert = lambda text: int(text) if text.isdigit() else text.lower()
+        alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+        return sorted(l, key=alphanum_key)
+
+    images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
+    images = natural_sort(images)
+
+    frame = cv2.imread(os.path.join(image_folder, images[0]))
+    height, width, layers = frame.shape
+
+    video = cv2.VideoWriter(video_name, 0, 10, (width, height))
+
+    for image in images:
+        video.write(cv2.imread(os.path.join(image_folder, image)))
+
+    cv2.destroyAllWindows()
+    video.release()
+
+    shutil.rmtree(path_to_experiment+'/temp')
 
 
 def find_candidates(trainable, threshold=0.25, trained=True):

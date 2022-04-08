@@ -8,7 +8,7 @@ import numpy as np
 class GeneticAttack:
 
     def __init__(self, x: torch.Tensor, y: int, trainable: TorchTrainable, N: int = 10, epochs=50,
-                 selective_pressure: float = 0.2, asexual_repro: float = 1, epsilon: float = 0.1,
+                 selective_pressure: float = 0.2, mutation_size=0.025, asexual_repro: float = 1, epsilon: float = 0.1,
                  uncertainty_power: int = 2, sameness_power: int = 4):
 
         """
@@ -30,6 +30,7 @@ class GeneticAttack:
         self.N = N
         self.epochs = epochs
         self.selective_pressure = selective_pressure
+        self.mutation_size = mutation_size
         self.asexual_repro = asexual_repro
         self.epsilon = epsilon
         self.uncertainty_power = uncertainty_power
@@ -72,7 +73,7 @@ class GeneticAttack:
             children = self.generate_children(population, parents_idx)
 
             # Perturb the population with random mutations
-            children[torch.where(children != 0)] += torch.normal(0, 0.05, size=children[torch.where(children != 0)].shape)
+            children[torch.where(children != 0)] += torch.normal(0, self.mutation_size, size=children[torch.where(children != 0)].shape)
             children = torch.clamp(children, 0, 1)
 
             # Elitism (maintain top solution at all times)

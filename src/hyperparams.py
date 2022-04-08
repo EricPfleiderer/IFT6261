@@ -3,7 +3,7 @@ import torch.optim as optim
 
 CNN_space = {
     'batch_size': 64,
-    'num_epochs': 10,
+    'num_epochs': 20,
     'optimizer': {
         'type': optim.SGD,  # Must be callable
         'opt_params': {
@@ -21,4 +21,5 @@ GA_space = {
     'epsilon': 0.025,
     'uncertainty_power': 2,
     'sameness_power': 2,
+    'mutation_size': 0.025,
 }
