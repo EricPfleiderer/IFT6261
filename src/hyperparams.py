@@ -14,12 +14,12 @@ CNN_space = {
 }
 
 GA_space = {
-    'epochs': 100,
-    'N': 30,
+    'epochs': 200,
+    'N': 50,
     'selective_pressure': 0.4,
     'asexual_repro': 1.0,
-    'epsilon': 0.05,
+    'epsilon': 0.1,
     'uncertainty_power': 2,
-    'sameness_power': 2,
+    'sameness_power': 4,
     'mutation_size': 0.025,
 }

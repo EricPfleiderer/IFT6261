@@ -9,7 +9,7 @@ import torch
 import src.utils as utils
 from src.GeneticAttack import GeneticAttack
 from src.trainable import TorchTrainable
-from src.hyperparams import *
+from src.hyperparams import CNN_space, GA_space
 from src.configs import configs
 from src.graphing import *
 
