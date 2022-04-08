@@ -38,10 +38,10 @@ class GeneticAttack:
         self.best_solution = x
 
         self.history = {
-            'uncertainty_loss': [],
-            'sameness_loss': [],
-            'best_solution': [],
-            'prediction_dist': [],
+            'uncertainty_loss': np.array([]),
+            'sameness_loss': np.array([]),
+            'best_solution': np.empty(shape=(0, 28, 28)),
+            'prediction_dist': np.empty(shape=(0, 10)),
         }
 
         # Create a population by duplicating the attack target (x)
@@ -83,10 +83,10 @@ class GeneticAttack:
 
             # Add to history
             uncertainty_loss, sameness_loss = self.loss(self.best_solution)
-            self.history['uncertainty_loss'].append(uncertainty_loss.cpu().detach())
-            self.history['sameness_loss'].append(sameness_loss.cpu().detach())
-            self.history['best_solution'].append(self.best_solution.cpu().detach())
-            self.history['prediction_dist'].append(self.trainable(self.best_solution).cpu().detach())
+            self.history['uncertainty_loss'] = np.append(self.history['uncertainty_loss'], uncertainty_loss.cpu().detach().numpy())
+            self.history['sameness_loss'] = np.append(self.history['sameness_loss'], sameness_loss.cpu().detach().numpy())
+            self.history['best_solution'] = np.concatenate((self.history['best_solution'], np.expand_dims(self.best_solution.cpu().detach().numpy(), axis=0)))
+            self.history['prediction_dist'] = np.concatenate((self.history['prediction_dist'], self.trainable(self.best_solution).cpu().detach().numpy()), axis=0)
 
     def complement_idx(self, idx: torch.Tensor, dim: int):
 

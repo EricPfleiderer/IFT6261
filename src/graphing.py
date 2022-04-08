@@ -1,3 +1,4 @@
+import logging
 
 import matplotlib.pyplot as plt
 from src.configs import *
@@ -21,8 +22,14 @@ def generate_experiment_recap(path_to_experiment):
     # Fetch genetic attack object
     ga: GeneticAttack = pickle.load(open(path_to_experiment+'/models/ga.json', 'rb'))
 
-    # Create temporary dir
+    max_uncertainty = np.max(ga.history['uncertainty_loss'])
+    max_sameness = np.max(ga.epsilon*ga.history['sameness_loss'])
+    max_subloss = np.max(np.array([max_uncertainty, max_sameness]))
 
+    total_loss = ga.history['uncertainty_loss'] + ga.epsilon * ga.history['sameness_loss']
+    max_loss = np.max(total_loss)
+
+    # Create temporary dir
     if os.path.isdir(path_to_experiment + '/temp'):
         shutil.rmtree(path_to_experiment + '/temp')
 
@@ -37,23 +44,30 @@ def generate_experiment_recap(path_to_experiment):
         figure, axis = plt.subplots(2, 2)
 
         axis[0, 0].imshow(ga.history['best_solution'][epoch])
-        axis[0, 0].set_title('Current solution')
+        axis[0, 0].set_title('Solution')
 
-        axis[0, 1].bar(range(0, 10), ga.history['prediction_dist'][epoch][0])
+        axis[0, 1].bar(range(0, 10), ga.history['prediction_dist'][epoch])
         axis[0, 1].set_title('Model predictions')
+        axis[0, 1].set_xticks(range(0, 10), range(0, 10))
         axis[0, 1].set_ylim([0, 1])
 
-        axis[1, 0].plot(x, ga.history['uncertainty_loss'][0:epoch])
-        axis[1, 0].set_title('Uncertainty loss')
-        axis[1, 0].set_xlim([0, ga.epochs])
-        axis[1, 0].set_ylim([0, 1])
+        axis[1, 0].plot(x, ga.history['uncertainty_loss'][0:epoch], label='uncertainty')
+        axis[1, 0].plot(x, ga.epsilon * ga.history['sameness_loss'][0:epoch], label='sameness')
+        axis[1, 0].set_title('Sublosses')
+        axis[1, 0].set_xlim(0, ga.epochs)
+        axis[1, 0].set_ylim([0, max_subloss])
+        axis[1, 0].legend()
 
-        axis[1, 1].plot(x, ga.epsilon*np.array(ga.history['sameness_loss'][0:epoch]))
-        axis[1, 1].set_title('Sameness loss')
+        axis[1, 1].plot(x, total_loss[0:epoch])
+        axis[1, 1].set_title('Total loss')
         axis[1, 1].set_xlim([0, ga.epochs])
-        axis[1, 1].set_ylim([0, ga.epsilon*np.max(np.array(ga.history['sameness_loss']))])
+        axis[1, 1].set_ylim([0, max_loss])
 
+        figure.tight_layout()
         plt.savefig(path_to_experiment + '/temp/' + f'{epoch}.png')
+
+        if epoch % 10 == 0:
+            logging.info(f'Graphing epoch {epoch}')
 
     # Generate video from frames
     image_folder = path_to_experiment + '/temp'

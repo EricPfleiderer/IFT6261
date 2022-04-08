@@ -21,7 +21,7 @@ utils.set_logging(logging_level)
 def run_experiment(x_index=788, trained_classifier_path=None, root='outputs/experiments/'):
 
     now = datetime.now()
-    full_path = root + 'Experiment_' + str(now) + '/' # Full path to current experiment
+    full_path = root + 'Experiment_' + str(now) + '/'  # Full path to current experiment
     os.makedirs(full_path)
 
     # Train from scratch
@@ -32,7 +32,7 @@ def run_experiment(x_index=788, trained_classifier_path=None, root='outputs/expe
         os.makedirs(full_path+'models/')
         pickle.dump(trainable, open(full_path+'models/' + 'classifier.json', 'wb'))
 
-        # open file for writing, "w" is writing
+        # Save classifier params to csv
         w = csv.writer(open(full_path + 'classifier_params.csv', "w"))
         for key, val in params.items():
             w.writerow([key, val])
@@ -41,6 +41,7 @@ def run_experiment(x_index=788, trained_classifier_path=None, root='outputs/expe
     else:
         trainable = pickle.load(open(trained_classifier_path, 'rb'))
 
+    # Graph classifier history
     trainable.plot_history(path=full_path)
 
     # Attack sample (single out of sample image and target)
@@ -48,9 +49,12 @@ def run_experiment(x_index=788, trained_classifier_path=None, root='outputs/expe
 
     params = GA_space
     ga = GeneticAttack(x, y, trainable, **params)
+
+    # Graph the genetic attack history
     ga.plot_history(path=full_path)
     pickle.dump(ga, open(full_path + 'models/' + 'ga.json', 'wb'))
-    # open file for writing, "w" is writing
+
+    # Save genetic attack params to csv
     w = csv.writer(open(full_path + 'ga_params.csv', "w"))
     for key, val in params.items():
         w.writerow([key, val])
@@ -62,5 +66,6 @@ def run_experiment(x_index=788, trained_classifier_path=None, root='outputs/expe
     print(f'The model thinks this is an image of a {torch.argmax(adversarial_prediction_dist)} with a confidence of {torch.max(adversarial_prediction_dist)}')
 
     generate_experiment_recap(full_path)
+
 
 run_experiment()
