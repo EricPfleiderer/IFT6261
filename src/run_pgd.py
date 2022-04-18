@@ -1,6 +1,4 @@
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import logging
 import matplotlib.pyplot as plt
 import os
@@ -20,7 +18,7 @@ from src.pgd import PGD
 logging_level = logging.INFO
 utils.set_logging(logging_level)
 
-def run_pgd_target(epsilon, alpha=2, nb_steps=40, x_index=788, trained_classifier_path=None, root='outputs/experiments/'):
+def run_pgd_target(epsilon, alpha=2/255, nb_steps=40, x_index=788, trained_classifier_path=None, root='outputs/experiments/'):
 
     now = datetime.now()
     full_path = root + 'Experiment_' + str(now) + '/'  # Full path to current experiment
@@ -45,7 +43,7 @@ def run_pgd_target(epsilon, alpha=2, nb_steps=40, x_index=788, trained_classifie
 
     x, y = trainable.test_loader.dataset[x_index][0][0], trainable.test_loader.dataset[x_index][1]
     print(x.shape, y)
-    pgd = PGD(trainable, epsilon=epsilon, nb_steps=nb_steps)
+    pgd = PGD(trainable, epsilon=epsilon, nb_steps=nb_steps, alpha=alpha)
 
     adv_im = pgd.pgd(x, y)
     original_prediction = trainable(x)
@@ -84,7 +82,7 @@ def run_pgd(epsilon, alpha=2/255, nb_steps=40, trained_classifier_path=None, roo
 
     adv_examples = []
     correct = 0
-    pgd = PGD(trainable=trainable, epsilon=epsilon, nb_steps=nb_steps, targeted=False)
+    pgd = PGD(trainable=trainable, epsilon=epsilon, nb_steps=nb_steps, alpha=alpha, targeted=False)
     for _, (x, y) in enumerate(trainable.test_loader):
         adv_x = pgd.pgd(x, y)
         original_prediction = trainable(x)
@@ -100,12 +98,11 @@ def run_pgd(epsilon, alpha=2/255, nb_steps=40, trained_classifier_path=None, roo
                     adv_ex = adv_x[i].squeeze().detach().cpu().numpy()
                     adv_examples.append((torch.argmax(original_prediction[i]).item(), torch.argmax(perturb_prediction[i]).item(), torch.max(perturb_prediction[i]).item(), adv_ex))
 
-            # print(f'The model thinks this is an image of a {torch.argmax(original_prediction[i])} with a confidence of {torch.max(original_prediction[i])}')
-            # print(f'The model thinks this is an image of a {torch.argmax(perturb_prediction[i])} with a confidence of {torch.max(perturb_prediction[i])}')
-
     final_acc = correct/(len(trainable.test_loader)*64)
-    print("Epsilon: {}\tTest Accuracy = {} / {} = {}".format(epsilon, correct, len(trainable.test_loader), final_acc))
+    print("Epsilon: {}\tTest Accuracy = {} / {} = {}".format(epsilon, correct, len(trainable.test_loader)*64, final_acc))
     return final_acc, adv_examples
+
+
 
 epsilons = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 2.0]
 
@@ -135,13 +132,7 @@ epsilons = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 2.0]
 adv_images = []
 orig, pert, pred, adv_ex = run_pgd_target(epsilon=0.2, nb_steps=30, trained_classifier_path='outputs/experiments/Experiment_2022-04-09 20:11:20.763245/models/classifier.json')
 adv_images.append((orig, pert, pred, adv_ex))
-print(adv_images[0][3].shape)
-print(len(adv_images))
-count=0
-count += 1
-plt.plot(len(epsilons), 2 ,count)
-plt.xticks(np.arange(0, 30, 5))
-plt.yticks(np.arange(30, -1, -5))
+plt.figure()
 plt.imshow(adv_images[0][3])
 
 plt.tight_layout()

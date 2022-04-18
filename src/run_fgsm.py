@@ -97,9 +97,6 @@ def run_fgsm(epsilon, trained_classifier_path=None, root='outputs/experiments'):
                     adv_ex = adv_x[i].squeeze().detach().cpu().numpy()
                     adv_examples.append((torch.argmax(original_prediction[i]).item(), torch.argmax(perturb_prediction[i]).item(), torch.max(perturb_prediction[i]).item(), adv_ex))
 
-            # print(f'The model thinks this is an image of a {torch.argmax(original_prediction[i])} with a confidence of {torch.max(original_prediction[i])}')
-            # print(f'The model thinks this is an image of a {torch.argmax(perturb_prediction[i])} with a confidence of {torch.max(perturb_prediction[i])}')
-
     final_acc = correct/(len(trainable.test_loader)*64)
     print("Epsilon: {}\tTest Accuracy = {} / {} = {}".format(epsilon, correct, len(trainable.test_loader), final_acc))
     return final_acc, adv_examples
@@ -131,11 +128,7 @@ epsilons = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]
 adv_images = []
 orig, pert, pred, adv_ex = run_fgsm_target(epsilon=0.2, trained_classifier_path='outputs/experiments/Experiment_2022-04-09 20:11:20.763245/models/classifier.json')
 adv_images.append((orig, pert, pred, adv_ex))
-count=0
-count += 1
-plt.plot(len(epsilons), 2 ,count)
-plt.xticks(np.arange(0, 30, 5))
-plt.yticks(np.arange(30, -1, -5))
+plt.figure()
 plt.imshow(adv_images[0][3])
 
 plt.tight_layout()
