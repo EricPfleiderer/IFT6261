@@ -1,12 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
-
-from src.loaders import get_dataset_by_name
-from src.classifier import get_classifier_by_dataset_name
-import logging
-
 from src.trainable import TorchTrainable
 
 
@@ -24,8 +17,7 @@ class PGD():
 
         loss_fn = nn.CrossEntropyLoss()
         adv_images = images.clone().detach()
-
-        for i in range(int(self.nb_steps)):
+        for _ in range(int(self.nb_steps)):
             adv_images.requires_grad = True
             if self.targeted :
                 outputs = -self.trainable(adv_images)[:, targets]

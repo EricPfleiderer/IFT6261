@@ -12,4 +12,5 @@ CNN_space = {
         },
     }
 }
+GAN_space = {'batch_size': 100}
 

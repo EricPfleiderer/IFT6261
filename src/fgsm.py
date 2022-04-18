@@ -1,10 +1,9 @@
 import torch
-from torch import autograd
-import torch.nn.functional as F
 import torch.nn as nn
-import numpy as np
 
 from src.trainable import TorchTrainable
+
+
 class FGSM:
 
     def __init__(self, trainable: TorchTrainable, epsilon, targeted=True) -> None:

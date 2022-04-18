@@ -1,21 +1,20 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from src.loaders import get_dataset_by_name
-from src.classifier import get_classifier_by_dataset_name
-import logging
+from src.hyperparams import GAN_space
+from src.configs import configs
 
 from src.gan import Discriminator, Generator
 
 class Gan():
-    def __init__(self, params, lr = 0.0002, g_input_dim=100, batch_size=100, epochs=200) -> None:
+    def __init__(self, params, lr = 0.0002, g_input_dim=100, epochs=200) -> None:
         self.params = params
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.train_loader, self.test_loader = get_dataset_by_name(params['dataset_name'], params['batch_size'])
         self.lr = lr
         self.epochs = epochs
-        self.batch_size = batch_size
+        self.batch_size = params['batch_size']
         self.g_input_dim = g_input_dim
         self.dataset_dim = self.train_loader.dataset.data.size(1)*self.train_loader.dataset.data.size(2)
         self.generator = Generator(self.g_input_dim, self.dataset_dim).to(self.device)
@@ -23,7 +22,7 @@ class Gan():
         self.criterion = nn.BCELoss()
         self.g_optimizer = optim.Adam(self.generator.parameters(), lr=self.lr)
         self.d_optimizer = optim.Adam(self.discriminator.parameters(), lr=self.lr)
-   
+
 
     def d_train(self, x):
 
@@ -48,8 +47,8 @@ class Gan():
         return loss.data.item()
 
 
-    def g_train(self, x):
-        
+    def g_train(self):
+
         self.generator.zero_grad()
 
         z = torch.randn(self.batch_size, self.g_input_dim).to(self.device)
@@ -68,8 +67,13 @@ class Gan():
     def training(self):
         for i in range(1, self.epochs+1):
             d_losses, g_losses = [], []
-            for batch_idx, (x,_)in enumerate(self.train_loader):
+            for _, (x,_)in enumerate(self.train_loader):
                 d_losses.append(self.d_train(x))
-                g_losses.append(self.g_train(x))
+                g_losses.append(self.g_train())
 
-            print('[%d/%d]: loss_d = %.3f, loss_g = %.3f' % ((epoch), self.epochs, torch.mean(torch.FloatTensor(d_losses)), torch.mean(torch.FloatTensor(g_losses))))
+            print('[%d/%d]: loss_d = %.3f, loss_g = %.3f' % ((i), self.epochs, torch.mean(torch.FloatTensor(d_losses)), torch.mean(torch.FloatTensor(g_losses))))
+
+
+params = dict(**GAN_space, **configs)
+gan = Gan(params)
+gan.training()

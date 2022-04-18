@@ -45,7 +45,7 @@ def run_pgd_target(epsilon, alpha=2, nb_steps=40, x_index=788, trained_classifie
 
     x, y = trainable.test_loader.dataset[x_index][0][0], trainable.test_loader.dataset[x_index][1]
     print(x.shape, y)
-    pgd = PGD(trainable, epsilon=epsilon)
+    pgd = PGD(trainable, epsilon=epsilon, nb_steps=nb_steps)
 
     adv_im = pgd.pgd(x, y)
     original_prediction = trainable(x)
@@ -107,65 +107,82 @@ def run_pgd(epsilon, alpha=2/255, nb_steps=40, trained_classifier_path=None, roo
     print("Epsilon: {}\tTest Accuracy = {} / {} = {}".format(epsilon, correct, len(trainable.test_loader), final_acc))
     return final_acc, adv_examples
 
-epsilons = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]
+epsilons = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 2.0]
 
 ############# Target PGD #############
-adv_images = []
-for eps in epsilons:
-    orig, pert, pred, adv_ex = run_pgd_target(epsilon=eps, trained_classifier_path='outputs/experiments/Experiment_2022-04-09 20:11:20.763245/models/classifier.json')
-    adv_images.append((orig, pert, pred, adv_ex))
+# adv_images = []
+# for eps in epsilons:
+#     orig, pert, pred, adv_ex = run_pgd_target(epsilon=eps, trained_classifier_path='outputs/experiments/Experiment_2022-04-09 20:11:20.763245/models/classifier.json')
+#     adv_images.append((orig, pert, pred, adv_ex))
 
+# print(len(adv_images))
+# plt.figure(figsize=(8, 10))
+# count=0
+# for i in range(len(epsilons)):
+#     count += 1
+#     plt.subplot(len(epsilons), 2, count)
+#     plt.xticks([], [])
+#     plt.yticks([], [])
+#     plt.ylabel("Eps : {}".format(epsilons[i]))
+#     plt.xlabel("Certainty : {}".format(round(adv_images[i][2], 2)))
+#     plt.title("{} -> {}".format(adv_images[i][0], adv_images[i][1]))
+#     plt.imshow(adv_images[i][3], cmap='gray')
+
+# plt.tight_layout()
+# plt.show()
+
+
+adv_images = []
+orig, pert, pred, adv_ex = run_pgd_target(epsilon=0.2, nb_steps=30, trained_classifier_path='outputs/experiments/Experiment_2022-04-09 20:11:20.763245/models/classifier.json')
+adv_images.append((orig, pert, pred, adv_ex))
+print(adv_images[0][3].shape)
 print(len(adv_images))
-plt.figure(figsize=(8, 10))
 count=0
-for i in range(len(epsilons)):
-    count += 1
-    plt.subplot(len(epsilons), 2, count)
-    plt.xticks([], [])
-    plt.yticks([], [])
-    plt.ylabel("Eps : {}".format(epsilons[i]))
-    plt.xlabel("Certainty : {}".format(round(adv_images[i][2], 2)))
-    plt.title("{} -> {}".format(adv_images[i][0], adv_images[i][1]))
-    plt.imshow(adv_images[i][3], cmap='gray')
+count += 1
+plt.plot(len(epsilons), 2 ,count)
+plt.xticks(np.arange(0, 30, 5))
+plt.yticks(np.arange(30, -1, -5))
+plt.imshow(adv_images[0][3])
 
 plt.tight_layout()
 plt.show()
+
 
 
 
 ############# Untargeted FGSM ############
-adv_images_untargeted = []
-accuracies = []
-for eps in epsilons:
-    acc, adv_ex = run_pgd(epsilon=eps, trained_classifier_path='outputs/experiments/Experiment_2022-04-09 20:11:20.763245/models/classifier.json')
-    adv_images_untargeted.append(adv_ex)
-    accuracies.append(acc)
-print(accuracies)
+#adv_images_untargeted = []
+#accuracies = []
+#for eps in epsilons:
+#    acc, adv_ex = run_pgd(epsilon=eps, nb_steps=40, trained_classifier_path='outputs/experiments/Experiment_2022-04-09 20:11:20.763245/models/classifier.json')
+#    adv_images_untargeted.append(adv_ex)
+#    accuracies.append(acc)
+#print(accuracies)
 
-#Accuracies plot
-plt.figure(figsize=(5,5))
-plt.plot(epsilons, accuracies)
-plt.yticks(np.arange(0, 1.1, step=0.1))
-plt.xticks(np.arange(0, 0.35, step=0.05))
-plt.xlabel("Epsilon")
-plt.ylabel("Accuracy")
-plt.title("Accuracy in function of epsilon value")
-plt.show()
+##Accuracies plot
+#plt.figure(figsize=(5,5))
+#plt.plot(epsilons, accuracies)
+#plt.yticks(np.arange(0, 1.1, step=0.1))
+#plt.xticks(np.arange(0, 0.35, step=0.05))
+#plt.xlabel("Epsilon")
+#plt.ylabel("Accuracy")
+#plt.title("Accuracy in function of epsilon value")
+#plt.show()
 
-#Adversarial examples plot
-cnt = 0
-plt.figure(figsize=(8,10))
-for i in range(len(epsilons)):
-    for j in range(len(adv_images_untargeted[i])):
-        cnt += 1
-        plt.subplot(len(epsilons),len(adv_images_untargeted[0]),cnt)
-        orig,adv,pred,ex = adv_images_untargeted[i][j]
-        plt.xticks([], [])
-        plt.yticks([], [])
-        if j == 0:
-            plt.ylabel("Eps: {}".format(epsilons[i]))
-        plt.xlabel("Certainty : {}".format(round(pred, 2)), fontsize=10)
-        plt.title("{} -> {}".format(orig, adv))
-        plt.imshow(ex, cmap='gray')
-plt.tight_layout()
-plt.show()
+##Adversarial examples plot
+#cnt = 0
+#plt.figure(figsize=(8,10))
+#for i in range(len(epsilons)):
+#    for j in range(len(adv_images_untargeted[i])):
+#        cnt += 1
+#        plt.subplot(len(epsilons),len(adv_images_untargeted[0]),cnt)
+#        orig,adv,pred,ex = adv_images_untargeted[i][j]
+#        plt.xticks([], [])
+#        plt.yticks([], [])
+#        if j == 0:
+#            plt.ylabel("Eps: {}".format(epsilons[i]))
+#        plt.xlabel("Certainty : {}".format(round(pred, 2)), fontsize=10)
+#        plt.title("{} -> {}".format(orig, adv))
+#        plt.imshow(ex, cmap='gray')
+#plt.tight_layout()
+#plt.show()
