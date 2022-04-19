@@ -23,3 +23,5 @@ GA_space = {
     'sameness_power': 4,
     'mutation_size': 0.025,
 }
+
+GAN_space = {'batch_size': 100}
